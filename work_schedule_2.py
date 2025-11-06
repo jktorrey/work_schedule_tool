@@ -29,7 +29,7 @@ def acquire_date():
         except ValueError:
             print("Error: Invalid date format. Please enter a date in YYYY-MM-DD format.")
 
-def calculate_shift(team, verified_date):
+def calculate_shift(team, date):
     rotation = [
         ["S", "S", "S", "S", "S", "S", "S"],  # week 1
         ["M", "M", "M", "M", "B", "B", "B"],  # week 2
@@ -59,7 +59,7 @@ def calculate_shift(team, verified_date):
         return None
 
     # Calculates the number of days between team's rotation start date and the user's entered date
-    delta = verified_date - team_start_date
+    delta = date - team_start_date
     total_days = delta.days
 
     # Calculate weeks and days
