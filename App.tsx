@@ -1,6 +1,40 @@
 import { useState } from 'react';
 import { DateWheelPicker } from './components/DateWheelPicker';
 import { Sun, Moon } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { useEffect } from 'react';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+// TO DO LOCALLY npm install @react-native-community/datetimepicker
+
+
+// Checks device screen size, specifically looking for Apple Watch sizes
+const isAppleWatch = () => {
+  const { width, height } = window.screen;
+  return Math.min(width, height) < 400; // Assuming Apple Watch screens are smaller than 400px
+};
+
+
+// Hook for persistent theme
+const usePersistedTheme = (defaultTheme) => {
+  const [isDarkMode, setIsDarkMode] = useState(defaultTheme);
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('isDarkMode');
+    if (storedTheme !== null) {
+      setIsDarkMode(JSON.parse(storedTheme));
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    localStorage.setItem('isDarkMode', JSON.stringify(newTheme));
+    setIsDarkMode(newTheme);
+  };
+
+  return { isDarkMode, toggleTheme };
+};
+
 
 // 10-week rotation schedule (70 days)
 // S = Straight, M = Mid, B = Break, D = Day
@@ -35,6 +69,8 @@ const TEAM_START_DATES = {
   4: new Date('2025-01-05'),
 };
 
+// The purpose of this function is to display the shift associated with the specific team
+// the user requested based on that team's start-date
 function getShiftForTeamAndDate(team: number, date: Date): string {
   const teamStartDate = TEAM_START_DATES[team as keyof typeof TEAM_START_DATES];
   const daysDiff = Math.floor((date.getTime() - teamStartDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -44,15 +80,54 @@ function getShiftForTeamAndDate(team: number, date: Date): string {
   return ROTATION_SCHEDULE[dayInRotation];
 }
 
+// Enter short descriptions for each shift here
+const SHIFT_DESCRIPTIONS = {
+  'Straight': 'Duty Hours: Flexible (weekends/holidays permitted only when covering)',
+  'Mid': 'Duty Hours: 1700-0500',
+  'Break': 'Duty Hours: None',
+  'Day': 'Duty Hours: 0500-1700',
+};
+
+
+// Loading Spinner configurations
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50px; /* Adjust as necessary */
+  font-size: 16px; /* Adjust as necessary */
+  color: white; /* Change color as needed */
+}
+
+// This is the main function for the application
 export default function App() {
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showWheelPicker, setShowWheelPicker] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const { isDarkMode, toggleTheme } = usePersistedTheme(true);
 
-  const shift = selectedTeam ? getShiftForTeamAndDate(selectedTeam, selectedDate) : null;
+  const shift = useMemo(() => {
+  return selectedTeam ? getShiftForTeamAndDate(selectedTeam, selectedDate) : null;
+}, [selectedTeam, selectedDate]);
+
+  const fetchShift = () => {
+    setIsLoading(true);
+    // Simulating fetching data
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  useEffect(() => {
+    if (selectedTeam) {
+      fetchShift();
+    }
+  }, [selectedTeam, selectedDate]);
+
   
   // Calculate shifts for previous and next day
   const getPreviousDay = (date: Date) => {
@@ -111,36 +186,42 @@ export default function App() {
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
-    
+  
+    // Visual feedback for swiping
+    const currentShiftElement = document.querySelector('.current-shift');
+    if (currentShiftElement) {
+      currentShiftElement.style.transition = 'transform 0.3s';
+      currentShiftElement.style.transform = isLeftSwipe ? 'scale(0.9)' : isRightSwipe ? 'scale(1.1)' : 'scale(1)';
+    }
+  
     if (isLeftSwipe) {
-      // Swipe left = go to next day
       const nextDay = new Date(selectedDate);
       nextDay.setDate(nextDay.getDate() + 1);
       setSelectedDate(nextDay);
     }
-    
+  
     if (isRightSwipe) {
-      // Swipe right = go to previous day
       const prevDay = new Date(selectedDate);
       prevDay.setDate(prevDay.getDate() - 1);
       setSelectedDate(prevDay);
     }
   };
 
+
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-black' : 'bg-gray-100'} flex items-center justify-center p-4`}>
       {/* Apple Watch Container */}
-      <div className={`relative w-[390px] h-[450px] ${isDarkMode ? 'bg-gradient-to-br from-gray-900 to-black border-gray-800' : 'bg-gradient-to-br from-gray-200 to-white border-gray-300'} rounded-[60px] border-8 shadow-2xl overflow-hidden`}>
+      <div className={`relative ${isAppleWatch() ? 'w-[300px] h-[350px]' : 'w-[390px] h-[450px]'} ${isDarkMode ? 'bg-gradient-to-br from-gray-900 to-black border-gray-800' : 'bg-gradient-to-br from-gray-200 to-white border-gray-300'} rounded-[60px] border-8 shadow-2xl overflow-hidden`}>
         {/* Screen */}
         <div className={`w-full h-full ${isDarkMode ? 'bg-black' : 'bg-white'} p-6 flex flex-col`}>
           {/* Header */}
           <div className="text-center mb-6 relative">
-            <h1 className={`${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1 text-2xl`}>Shift Happens</h1>
-            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-base`}>Select Team & Date</p>
+            <h1 className={`${isAppleWatch() ? 'text-xl' : 'text-2xl'} ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1`}>Shift Happens</h1>
+            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-base`}>Select team & date</p>
             
             {/* Theme Toggle */}
             <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
+              onClick={toggleTheme}
               className={`absolute top-0 right-0 p-2 rounded-full ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-yellow-400' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'} transition-colors`}
             >
               {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
@@ -172,16 +253,28 @@ export default function App() {
           {/* Date Selection */}
           <div className="mb-3">
             <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-base mb-2 text-center`}>Date</p>
-            <button
-              onClick={() => setShowWheelPicker(true)}
-              className={`w-full h-10 ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'} rounded-2xl flex items-center justify-center gap-2 transition-colors`}
-            >
+            <button onClick={() => setShowDatePicker(true)} className={`w-full h-10 ${isDarkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'} rounded-2xl flex items-center justify-center gap-2 transition-colors`}>
               <span className="text-base">{formatDate(selectedDate)}</span>
             </button>
+            {showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="default"
+                onChange={(event, date) => {
+                  if (date) {
+                    setSelectedDate(date);
+                  }
+                  setShowDatePicker(false);
+                }}
+              />
+            )}
           </div>
+
 
           {/* Shift Display */}
           <div className="flex-1 flex flex-col items-center justify-center">
+            {isLoading && <div className="loading-spinner">Loading...</div>}
             {selectedTeam && shift ? (
               <div 
                 className="text-center"
@@ -196,9 +289,10 @@ export default function App() {
                   </div>
                   
                   {/* Current Day */}
-                  <div className={`w-32 h-32 rounded-full ${getShiftColor(shift)} flex items-center justify-center shadow-lg`}>
+                  <div className={`w-32 h-32 rounded-full ${getShiftColor(shift)} flex items-center justify-center shadow-lg current-shift`}>
                     <span className="text-white text-3xl">{shift}</span>
                   </div>
+
                   
                   {/* Next Day */}
                   <div className={`w-16 h-16 rounded-full ${getShiftColor(nextDayShift)} flex items-center justify-center shadow-md opacity-60`}>
@@ -206,7 +300,7 @@ export default function App() {
                   </div>
                 </div>
                 <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-lg`}>
-                  {getDayOfWeek(selectedDate)}
+                  {getDayOfWeek(selectedDate)} - {SHIFT_DESCRIPTIONS[shift]}
                 </p>
               </div>
             ) : (
