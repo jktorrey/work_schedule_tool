@@ -1,0 +1,37 @@
+{
+  "name": "Shift Happens",
+  "version": "1.0.0",
+  "description": "On your Mac:",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jktorrey/work_schedule_tool.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jktorrey/work_schedule_tool/issues"
+  },
+  "homepage": "https://github.com/jktorrey/work_schedule_tool#readme",
+  "devDependencies": {
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.3",
+    "@react-native-community/datetimepicker": "^8.5.1",
+    "expo": "^54.0.30",
+    "expo-linear-gradient": "~15.0.8",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "^0.81.5",
+    "react-native-worklets": "0.5.1"
+  }
+}
