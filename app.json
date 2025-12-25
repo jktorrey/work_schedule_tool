@@ -4,12 +4,15 @@
     "slug": "work_schedule_tool",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",
-    "entryPoint": "index.js",
     "ios": {
       "bundleIdentifier": "com.anonymous.work-schedule-tool"
     },
     "android": {
       "package": "com.anonymous.work_schedule_tool"
-    }
+    },
+    "plugins": [
+      "expo-font",
+      "@react-native-community/datetimepicker"
+    ]
   }
 }
