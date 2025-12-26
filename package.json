@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/jktorrey/work_schedule_tool#readme",
   "devDependencies": {
+    "@react-native-community/cli": "^20.0.2",
     "@types/react": "~19.1.10",
     "typescript": "~5.9.2"
   },
@@ -33,6 +34,8 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "^0.81.5",
+    "react-native-modal-datetime-picker": "^18.0.0",
+    "react-native-safe-area-context": "^5.6.2",
     "react-native-worklets": "0.5.1"
   }
 }
