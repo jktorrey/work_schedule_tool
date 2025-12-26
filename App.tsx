@@ -1,33 +1,31 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, Button, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
-import { DateWheelPicker } from './components/DateWheelPicker';
-import styles from './styles';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
-// Checks device screen size (Apple Watch detection)
+// --- Apple Watch detection ---
 const isAppleWatch = () => {
-  const { width, height } = { width: 390, height: 450 }; // fallback values for RN
+  const { width, height } = { width: 390, height: 450 }; // fallback values
   return Math.min(width, height) < 400;
 };
 
-// Persistent theme hook
+// --- Theme hook ---
 const usePersistedTheme = (defaultTheme: boolean) => {
   const [isDarkMode, setIsDarkMode] = useState(defaultTheme);
-
-  useEffect(() => {
-    // For RN, AsyncStorage could be used instead of localStorage
-  }, []);
-
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
   return { isDarkMode, toggleTheme };
 };
 
-// Rotation schedule and team start dates
+// --- Rotation schedule and team start dates ---
 const ROTATION_SCHEDULE = [
   'Straight','Straight','Straight','Straight','Straight','Straight','Straight',
   'Mid','Mid','Mid','Mid','Break','Break','Break',
@@ -62,20 +60,46 @@ const SHIFT_DESCRIPTIONS: Record<string, string> = {
   'Day': 'Duty Hours: 0500-1700',
 };
 
+// --- ShiftCircle component ---
+interface ShiftCircleProps {
+  shift: string | null;
+  colors: string[];
+  large?: boolean;
+}
+
+const ShiftCircle: React.FC<ShiftCircleProps> = ({ shift, colors, large = false }) => {
+  return (
+    <LinearGradient
+      colors={colors}
+      style={[
+        localStyles.circle,
+        large && { width: 90, height: 90, borderRadius: 45 },
+      ]}
+    >
+      <Text style={large ? localStyles.circleTextLarge : localStyles.circleText}>
+        {shift}
+      </Text>
+    </LinearGradient>
+  );
+};
+
+// --- Main App ---
 export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showWheelPicker, setShowWheelPicker] = useState(false);
 
   const { isDarkMode, toggleTheme } = usePersistedTheme(true);
 
-  const shift = useMemo(() => selectedTeam ? getShiftForTeamAndDate(selectedTeam, selectedDate) : null, [selectedTeam, selectedDate]);
+  const shift = useMemo(
+    () => selectedTeam ? getShiftForTeamAndDate(selectedTeam, selectedDate) : null,
+    [selectedTeam, selectedDate]
+  );
 
   const fetchShift = () => {
     setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 1000);
+    setTimeout(() => setIsLoading(false), 500);
   };
 
   useEffect(() => {
@@ -92,118 +116,169 @@ export default function App() {
     }
   };
 
-  const formatDate = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const getDayOfWeek = (date: Date) => date.toLocaleDateString('en-US', { weekday: 'long' });
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-  const previousDay = new Date(selectedDate);
-  previousDay.setDate(previousDay.getDate() - 1);
-  const nextDay = new Date(selectedDate);
-  nextDay.setDate(nextDay.getDate() + 1);
+  const getDayOfWeek = (date: Date) =>
+    date.toLocaleDateString('en-US', { weekday: 'long' });
+
+  const previousDay = new Date(selectedDate); previousDay.setDate(previousDay.getDate() - 1);
+  const nextDay = new Date(selectedDate); nextDay.setDate(nextDay.getDate() + 1);
 
   const previousDayShift = selectedTeam ? getShiftForTeamAndDate(selectedTeam, previousDay) : null;
   const nextDayShift = selectedTeam ? getShiftForTeamAndDate(selectedTeam, nextDay) : null;
 
   return (
-    <View style={[localStyles.container, { backgroundColor: isDarkMode ? '#000' : '#F3F4F6' }]}>
-      {/* Header */}
-      <View style={localStyles.header}>
-        <Text style={[localStyles.title, { color: isDarkMode ? '#FFF' : '#111' }]}>Shift Happens</Text>
-        <Text style={{ color: isDarkMode ? '#A1A1AA' : '#4B5563' }}>Select team & date</Text>
-        <TouchableOpacity onPress={toggleTheme} style={localStyles.themeButton}>
-          {isDarkMode ? <Feather name="sun" size={24} color="#FFD700" /> : <Feather name="moon" size={24} color="#1F2937" />}
-        </TouchableOpacity>
-      </View>
-
-      {/* Team Selection */}
-      <View style={localStyles.teamContainer}>
-        {[1,2,3,4].map(team => (
-          <TouchableOpacity
-            key={team}
-            onPress={() => setSelectedTeam(team)}
-            style={[
-              localStyles.teamButton,
-              { backgroundColor: selectedTeam === team ? '#4F46E5' : isDarkMode ? '#1F2937' : '#E5E7EB' }
-            ]}
-          >
-            <Text style={{ color: selectedTeam === team ? '#FFF' : isDarkMode ? '#D1D5DB' : '#111', fontWeight: '600' }}>
-              {team}
-            </Text>
+    <SafeAreaProvider>
+      <SafeAreaView
+        edges={['top', 'left', 'right', 'bottom']}
+        style={[localStyles.container, { backgroundColor: isDarkMode ? '#000' : '#F3F4F6' }]}
+      >
+        {/* Header */}
+        <View style={localStyles.header}>
+          <Text style={[localStyles.title, { color: isDarkMode ? '#FFF' : '#111' }]}>Shift Happens</Text>
+          <Text style={{ color: isDarkMode ? '#A1A1AA' : '#4B5563' }}>Select team & date</Text>
+          <TouchableOpacity onPress={toggleTheme} style={localStyles.themeButton}>
+            {isDarkMode ? <Feather name="sun" size={24} color="#FFD700" /> : <Feather name="moon" size={24} color="#1F2937" />}
           </TouchableOpacity>
-        ))}
-      </View>
+        </View>
 
-      {/* Date Picker */}
-      <View style={localStyles.dateContainer}>
-        <Button title={formatDate(selectedDate)} onPress={() => setShowDatePicker(true)} />
+        {/* Team Selection */}
+        <View style={localStyles.teamContainer}>
+          {[1, 2, 3, 4].map(team => (
+            <TouchableOpacity
+              key={team}
+              onPress={() => setSelectedTeam(team)}
+              style={[
+                localStyles.teamButton,
+                {
+                  backgroundColor: selectedTeam === team ? '#4F46E5' : isDarkMode ? '#1F2937' : '#E5E7EB',
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  localStyles.teamButtonText,
+                  { color: selectedTeam === team ? '#FFF' : isDarkMode ? '#D1D5DB' : '#111' },
+                ]}
+              >
+                {team}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Date Picker */}
+        <TouchableOpacity
+          style={[localStyles.dateText, { backgroundColor: isDarkMode ? '#1F2937' : '#E5E7EB' }]}
+          onPress={() => setShowDatePicker(true)}
+        >
+          <Text style={{ color: isDarkMode ? '#FFF' : '#111', fontWeight: '600', textAlign: 'center' }}>
+            {formatDate(selectedDate)}
+          </Text>
+        </TouchableOpacity>
+
         {showDatePicker && (
           <DateTimePicker
             value={selectedDate}
             mode="date"
-            display="default"
+            display="spinner"
+            themeVariant={isDarkMode ? 'dark' : 'light'}
+            textColor={isDarkMode ? '#FFF' : '#000'}
             onChange={(e, date) => {
               if (date) setSelectedDate(date);
               setShowDatePicker(false);
             }}
           />
         )}
-      </View>
 
-      {/* Shift Display */}
-      <View style={localStyles.shiftContainer}>
-        {isLoading && (
-          <View style={localStyles.loadingSpinner}>
-            <ActivityIndicator size="large" color="#0000ff" />
-          </View>
-        )}
+        {/* Shift Display */}
+        <View style={localStyles.shiftContainer}>
+          {isLoading && <ActivityIndicator size="large" color="#0000ff" style={{ marginBottom: 16 }} />}
 
-        {selectedTeam && shift ? (
-          <View style={localStyles.currentShiftContainer}>
-            <LinearGradient colors={getShiftColor(previousDayShift)} style={localStyles.circle}>
-              <Text style={localStyles.circleText}>{previousDayShift}</Text>
-            </LinearGradient>
+          {selectedTeam && shift ? (
+            <View style={localStyles.currentShiftContainer}>
+              <ShiftCircle shift={previousDayShift} colors={getShiftColor(previousDayShift)} />
+              <ShiftCircle shift={shift} colors={getShiftColor(shift)} large />
+              <ShiftCircle shift={nextDayShift} colors={getShiftColor(nextDayShift)} />
+            </View>
+          ) : (
+            <Text style={{ color: isDarkMode ? '#6B7280' : '#9CA3AF', marginTop: 12 }}>
+              Select a team and date
+            </Text>
+          )}
 
-            <LinearGradient colors={getShiftColor(shift)} style={localStyles.circle}>
-              <Text style={localStyles.circleTextLarge}>{shift}</Text>
-            </LinearGradient>
-
-            <LinearGradient colors={getShiftColor(nextDayShift)} style={localStyles.circle}>
-              <Text style={localStyles.circleText}>{nextDayShift}</Text>
-            </LinearGradient>
-          </View>
-        ) : (
-          <View style={localStyles.noShift}>
-            <Text style={{ color: isDarkMode ? '#6B7280' : '#9CA3AF' }}>Select a team and date</Text>
-          </View>
-        )}
-
-        {selectedTeam && shift && (
-          <Text style={{ color: isDarkMode ? '#A1A1AA' : '#4B5563', marginTop: 12 }}>
-            {getDayOfWeek(selectedDate)} - {SHIFT_DESCRIPTIONS[shift]}
-          </Text>
-        )}
-      </View>
-    </View>
+          {selectedTeam && shift && (
+            <Text style={{ color: isDarkMode ? '#A1A1AA' : '#4B5563', marginTop: 12 }}>
+              {getDayOfWeek(selectedDate)} - {SHIFT_DESCRIPTIONS[shift]}
+            </Text>
+          )}
+        </View>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
 const localStyles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 16 },
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    padding: 16,
+    paddingTop: Platform.OS === 'ios' ? 20 : 16,
+  },
   header: { width: '100%', alignItems: 'center', marginBottom: 20, position: 'relative' },
   title: { fontSize: 28, fontWeight: '800', marginBottom: 4 },
   themeButton: { position: 'absolute', top: 0, right: 0, padding: 6, borderRadius: 12 },
 
-  teamContainer: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginBottom: 20 },
-  teamButton: { paddingVertical: 14, paddingHorizontal: 18, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
+  teamContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 20,
+  },
+  teamButton: {
+    flex: 1,
+    minWidth: 50,
+    maxWidth: 100,
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  teamButtonText: { fontWeight: '600', textAlign: 'center' },
 
-  dateContainer: { marginBottom: 20, width: '100%', alignItems: 'center' },
+  dateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
 
   shiftContainer: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' },
   currentShiftContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', width: '100%', marginBottom: 12 },
 
-  circle: { width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 6 },
+  circle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
+  },
   circleText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
   circleTextLarge: { color: '#FFF', fontSize: 24, fontWeight: '700' },
-
-  noShift: { alignItems: 'center', justifyContent: 'center' },
-  loadingSpinner: { marginBottom: 16 },
 });
